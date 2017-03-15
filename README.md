@@ -30,4 +30,4 @@ Select the **Move line** tool to move the cutting line.
 
 Copyright 2017 - Antonio Carlón
 
-Licensed under **GNU General Public License v3**
+Licensed under **GNU General Public License v3**. See LICENSE file for more details
