@@ -1,5 +1,10 @@
-# SplitPolygonShowingAreas
+# Split Features On Steroids
 QGIS plugin that splits one or more polygon/multipolygon features showing the resulting areas on each side of the cutting line and allowing cutting line editions
+
+###Current version
+v0.11
+
+###Manual
 
 Start editing a polygon/multipolygon feature and select the **Split Features On Steroids** tool. The tool will show the resulting areas on each side of the cutting line.
 
@@ -21,7 +26,8 @@ Select the **Open line** tool when the line is closed to open the cutting line.
 
 Select the **Move line** tool to move the cutting line. 
 
+###License
 
-**Copyright 2017 - Antonio Carlón**
+Copyright 2017 - Antonio Carlón
 
 Licensed under **GNU General Public License v3**
