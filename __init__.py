@@ -1,3 +1,3 @@
 def classFactory(iface):
-	from plugin import SplitPolygonShowingAreasPlugin
-	return SplitPolygonShowingAreasPlugin(iface)
+	from plugin import SplitFeaturesOnSteroidsPlugin
+	return SplitFeaturesOnSteroidsPlugin(iface)

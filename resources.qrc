@@ -1,5 +1,12 @@
 <RCC>
 	<qresource prefix="/plugins/SplitPolygonShowingAreas">
 		<file>icon.png</file>
+		<file>moveVertices.png</file>
+		<file>addVertices.png</file>
+		<file>removeVertices.png</file>
+		<file>moveSegment.png</file>
+		<file>lineClose.png</file>
+		<file>lineOpen.png</file>
+		<file>moveLine.png</file>
 	</qresource>
 </RCC>
