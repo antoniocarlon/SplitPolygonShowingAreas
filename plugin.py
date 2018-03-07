@@ -1,16 +1,20 @@
+from __future__ import absolute_import
 # 2017 - Antonio Carlon
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from builtins import str
+from builtins import range
+from builtins import object
+from qgis.PyQt.QtCore import QObject, Qt
+from qgis.PyQt.QtGui import QIcon, QColor, QPen, QBrush
+from qgis.PyQt.QtWidgets import QAction, QMessageBox, QGraphicsTextItem
 from math import sqrt, sin, cos, pi, pow
 
-from string import *
-import resources
+from . import resources
 import threading
 import qgis.utils
 
-from qgis.core import *
-from qgis.gui import *
+from qgis.core import QgsVectorLayer, QgsProject, QgsDistanceArea, QgsPoint, QgsPointXY, QgsGeometry, QgsWkbTypes
+from qgis.gui import QgsMessageBar, QgsMapToolEdit, QgsRubberBand
 
 name = "Split Features On Steroids"
 moveVerticesName = "Move Vertices"
@@ -23,7 +27,7 @@ moveLineName = "Move line"
 areaUnits = {0 : "m<sup>2</sup>", 1 : "km<sup>2</sup>", 2 : "ft<sup>2</sup>", 3 : "sq yd", 4 : "sq mi", 5 : "ha", 6 : "ac", 7 : "M<sup>2</sup>", 8 : "deg<sup>2</sup>", 9 : ""}
 maxDistanceHitTest = 5
 
-class SplitFeaturesOnSteroidsPlugin:
+class SplitFeaturesOnSteroidsPlugin(object):
 	mapTool = None
 
 	def __init__(self, iface):
@@ -36,42 +40,42 @@ class SplitFeaturesOnSteroidsPlugin:
 		icon = QIcon(":/plugins/SplitPolygonShowingAreas/icon.png")
 		self.action = QAction(icon, name, self.iface.mainWindow())
 		self.action.setCheckable(True)
-		QObject.connect(self.action, SIGNAL("triggered()"), self.onClick)
+		self.action.triggered.connect(self.onClick)
 		self.toolbar.addAction(self.action)
 
 		self.actionMoveVertices = QAction(QIcon(":/plugins/SplitPolygonShowingAreas/moveVertices.png"), moveVerticesName, self.iface.mainWindow())
 		self.actionMoveVertices.setCheckable(True)
-		QObject.connect(self.actionMoveVertices, SIGNAL("triggered()"), self.onClickMoveVertices)
+		self.actionMoveVertices.triggered.connect(self.onClickMoveVertices)
 		self.toolbar.addAction(self.actionMoveVertices)
 
 		self.actionAddVertices = QAction(QIcon(":/plugins/SplitPolygonShowingAreas/addVertices.png"), addVerticesName, self.iface.mainWindow())
 		self.actionAddVertices.setCheckable(True)
-		QObject.connect(self.actionAddVertices, SIGNAL("triggered()"), self.onClickAddVertices)
+		self.actionAddVertices.triggered.connect(self.onClickAddVertices)
 		self.toolbar.addAction(self.actionAddVertices)
 
 		self.actionRemoveVertices = QAction(QIcon(":/plugins/SplitPolygonShowingAreas/removeVertices.png"), removeVerticesName, self.iface.mainWindow())
 		self.actionRemoveVertices.setCheckable(True)
-		QObject.connect(self.actionRemoveVertices, SIGNAL("triggered()"), self.onClickRemoveVertices)
+		self.actionRemoveVertices.triggered.connect(self.onClickRemoveVertices)
 		self.toolbar.addAction(self.actionRemoveVertices)
 
 		self.actionMoveSegment = QAction(QIcon(":/plugins/SplitPolygonShowingAreas/moveSegment.png"), moveSegmentName, self.iface.mainWindow())
 		self.actionMoveSegment.setCheckable(True)
-		QObject.connect(self.actionMoveSegment, SIGNAL("triggered()"), self.onClickMoveSegment)
+		self.actionMoveSegment.triggered.connect(self.onClickMoveSegment)
 		self.toolbar.addAction(self.actionMoveSegment)
 
 		self.actionLineClose = QAction(QIcon(":/plugins/SplitPolygonShowingAreas/lineClose.png"), closeLineName, self.iface.mainWindow())
 		self.actionLineClose.setCheckable(False)
-		QObject.connect(self.actionLineClose, SIGNAL("triggered()"), self.onClickLineClose)
+		self.actionLineClose.triggered.connect(self.onClickLineClose)
 		self.toolbar.addAction(self.actionLineClose)
 		
 		self.actionLineOpen = QAction(QIcon(":/plugins/SplitPolygonShowingAreas/lineOpen.png"), openLineName, self.iface.mainWindow())
 		self.actionLineOpen.setCheckable(False)
-		QObject.connect(self.actionLineOpen, SIGNAL("triggered()"), self.onClickLineOpen)
+		self.actionLineOpen.triggered.connect(self.onClickLineOpen)
 		self.toolbar.addAction(self.actionLineOpen)
 
 		self.actionMoveLine = QAction(QIcon(":/plugins/SplitPolygonShowingAreas/moveLine.png"), moveLineName, self.iface.mainWindow())
 		self.actionMoveLine.setCheckable(True)
-		QObject.connect(self.actionMoveLine, SIGNAL("triggered()"), self.onClickMoveLine)
+		self.actionMoveLine.triggered.connect(self.onClickMoveLine)
 		self.toolbar.addAction(self.actionMoveLine)
 
 		self.iface.addPluginToMenu(name, self.action)
@@ -83,7 +87,7 @@ class SplitFeaturesOnSteroidsPlugin:
 		self.iface.addPluginToMenu(name, self.actionLineOpen)
 		self.iface.addPluginToMenu(name, self.actionMoveLine)
 		self.help_action = QAction("Help", self.iface.mainWindow())
-		QObject.connect(self.help_action, SIGNAL("triggered()"), self.onHelp)
+		self.help_action.triggered.connect(self.onHelp)
 		self.iface.addPluginToMenu(name, self.help_action)
 
 		self.iface.currentLayerChanged.connect(self.currentLayerChanged)
@@ -142,7 +146,7 @@ class SplitFeaturesOnSteroidsPlugin:
 			self.mapTool = None
 			return
 		layer = self.iface.activeLayer()
-		if layer == None or not isinstance(layer, QgsVectorLayer) or (layer.wkbType() != QGis.WKBPolygon and layer.wkbType() != QGis.WKBMultiPolygon):
+		if layer == None or not isinstance(layer, QgsVectorLayer) or (layer.wkbType() != QgsWkbTypes.Polygon and layer.wkbType() != QgsWkbTypes.MultiPolygon):
 			self.iface.messageBar().pushMessage("No Polygon Vectorial Layer Selected", "Select a Polygon Vectorial Layer first", level=QgsMessageBar.WARNING)
 			self.action.setChecked(False)
 			return
@@ -251,7 +255,7 @@ class SplitFeaturesOnSteroidsPlugin:
 		
 		if layer != None and isinstance(layer, QgsVectorLayer):
 			selectedFeatures = layer.selectedFeatures()
-			if isinstance(layer, QgsVectorLayer) and (layer.wkbType() == QGis.WKBPolygon or layer.wkbType() == QGis.WKBMultiPolygon) and selectedFeatures != None and len(selectedFeatures) > 0 and layer.isEditable():
+			if isinstance(layer, QgsVectorLayer) and (layer.wkbType() == QgsWkbTypes.Polygon or layer.wkbType() == QgsWkbTypes.MultiPolygon) and selectedFeatures != None and len(selectedFeatures) > 0 and layer.isEditable():
 				self.action.setEnabled(True)
 
 class SplitMapTool(QgsMapToolEdit):
@@ -291,9 +295,8 @@ class SplitMapTool(QgsMapToolEdit):
 		self.labels = []
 		self.vertices = []
 		self.calculator = QgsDistanceArea()
-		self.calculator.setSourceCrs(self.layer.dataProvider().crs())
+		self.calculator.setSourceCrs(self.layer.dataProvider().crs(), QgsProject.instance().transformContext())
 		self.calculator.setEllipsoid(self.layer.dataProvider().crs().ellipsoidAcronym())
-		self.calculator.setEllipsoidalMode(self.layer.dataProvider().crs().geographicFlag())
 		self.drawingLine = False
 		self.movingVertices = False
 		self.addingVertices = False
@@ -376,9 +379,9 @@ class SplitMapTool(QgsMapToolEdit):
 
 	def projectPoint(self, point, distance, bearing):
 		rads = bearing * pi / 180.0
-   		dx = distance * sin(rads)
-   		dy = distance * cos(rads)
-   		return QgsPoint(point.x() + dx, point.y() + dy)
+		dx = distance * sin(rads)
+		dy = distance * cos(rads)
+		return QgsPointXY(point.x() + dx, point.y() + dy)
  	
 	def redrawAreas(self, mousePos=None):
 		self.deleteLabels()
@@ -406,7 +409,8 @@ class SplitMapTool(QgsMapToolEdit):
 			+ "%.2f" % round(area,2) + " "
 			+ areaUnits[self.calculator.areaUnits()]
 			+ "</div>")
-		label.setPos(self.toCanvasCoordinates(self.toMapCoordinates(self.layer, labelPoint)))
+		point = self.toMapCoordinatesV2(self.layer, labelPoint)
+		label.setPos(self.toCanvasCoordinates(QgsPointXY(point.x(), point.y())))
 
 		self.scene.addItem(label)
 		self.labels.append(label)
@@ -419,15 +423,18 @@ class SplitMapTool(QgsMapToolEdit):
 	def canvasPressEvent(self, event):
 		if self.movingVertices:
 			for i in range(len(self.capturedPoints)):
-				currentVertex = self.toCanvasCoordinates(self.toMapCoordinates(self.layer, self.capturedPoints[i]))
+				point = self.toMapCoordinates(self.layer, self.capturedPoints[i])
+				currentVertex = self.toCanvasCoordinates(QgsPointXY(point.x(), point.y()))
 				if self.distancePoint(event.pos(), currentVertex) <= maxDistanceHitTest:
 					self.movingVertex = i
 					break
 
 		if self.movingSegment:
 			for i in range(len(self.capturedPoints) - 1):
-				currentVertex1 = self.toCanvasCoordinates(self.toMapCoordinates(self.layer, self.capturedPoints[i]))
-				currentVertex2 = self.toCanvasCoordinates(self.toMapCoordinates(self.layer, self.capturedPoints[i + 1]))
+				vertex1 = self.toMapCoordinates(self.layer, self.capturedPoints[i])
+				currentVertex1 = self.toCanvasCoordinates(QgsPointXY(vertex1.x(), vertex1.y()))
+				vertex2 = self.toMapCoordinates(self.layer, self.capturedPoints[i + 1])
+				currentVertex2 = self.toCanvasCoordinates(QgsPointXY(vertex2.x(), vertex2.y()))
 				if self.distancePointLine(event.pos().x(), event.pos().y(), currentVertex1.x(), currentVertex1.y(), currentVertex2.x(), currentVertex2.y()) <= maxDistanceHitTest:
 					self.movingSegm = i
 					break
@@ -499,7 +506,7 @@ class SplitMapTool(QgsMapToolEdit):
 		color = QColor("red")
 		color.setAlphaF(0.78)
 
-		self.rubberBand = QgsRubberBand(self.canvas, QGis.Line)
+		self.rubberBand = QgsRubberBand(self.canvas, QgsWkbTypes.LineGeometry)
 		self.rubberBand.setWidth(1)
 		self.rubberBand.setColor(color)
 		self.rubberBand.show()
@@ -508,7 +515,7 @@ class SplitMapTool(QgsMapToolEdit):
 		color = QColor("red")
 		color.setAlphaF(0.78)
 
-		self.tempRubberBand = QgsRubberBand(self.canvas, QGis.Line)
+		self.tempRubberBand = QgsRubberBand(self.canvas, QgsWkbTypes.LineGeometry)
 		self.tempRubberBand.setWidth(1)
 		self.tempRubberBand.setColor(color)
 		self.tempRubberBand.setLineStyle(Qt.DotLine)
@@ -518,12 +525,18 @@ class SplitMapTool(QgsMapToolEdit):
 		self.canvas.scene().removeItem(self.rubberBand)
 		self.prepareRubberBand()
 		for i in range(len(self.capturedPoints)):
-			vertexCoord = self.toMapCoordinates(self.layer, self.capturedPoints[i])
+			point = self.capturedPoints[i]
+			if point.__class__ == QgsPoint:
+				vertexCoord = self.toMapCoordinatesV2(self.layer, self.capturedPoints[i])
+				vertexCoord = QgsPointXY(vertexCoord.x(), vertexCoord.y())
+			else:
+				vertexCoord = self.toMapCoordinates(self.layer, self.capturedPoints[i])
+
 			self.rubberBand.addPoint(vertexCoord)
 
 	def redrawTempRubberBand(self):
 		if self.tempRubberBand != None:
-			self.tempRubberBand.reset(QGis.Line)
+			self.tempRubberBand.reset(QgsWkbTypes.LineGeometry)
 			self.tempRubberBand.addPoint(self.toMapCoordinates(self.layer, self.capturedPoints[len(self.capturedPoints) - 1]))
 
 	def stopCapturing(self):
@@ -551,7 +564,7 @@ class SplitMapTool(QgsMapToolEdit):
 		self.rubberBand.addPoint(mapPoint)
 		self.capturedPoints.append(layerPoint)
 
-		self.tempRubberBand.reset(QGis.Line)
+		self.tempRubberBand.reset(QgsWkbTypes.LineGeometry)
 		self.tempRubberBand.addPoint(mapPoint)
 
 	def removeLastVertex(self):
@@ -579,9 +592,10 @@ class SplitMapTool(QgsMapToolEdit):
 		newCapturedPoints = []
 		for i in range(len(self.capturedPoints) - 1):
 			newCapturedPoints.append(self.capturedPoints[i])
-
-			currentVertex1 = self.toCanvasCoordinates(self.toMapCoordinates(self.layer, self.capturedPoints[i]))
-			currentVertex2 = self.toCanvasCoordinates(self.toMapCoordinates(self.layer, self.capturedPoints[i + 1]))
+			vertex1 = self.toMapCoordinates(self.layer, self.capturedPoints[i])
+			currentVertex1 = self.toCanvasCoordinates(QgsPointXY(vertex1.x(), vertex1.y()))
+			vertex2 = self.toMapCoordinates(self.layer, self.capturedPoints[i + 1])
+			currentVertex2 = self.toCanvasCoordinates(QgsPointXY(vertex2.x(), vertex2.y()))
 
 			distance = self.distancePointLine(pos.x(), pos.y(), currentVertex1.x(), currentVertex1.y(), currentVertex2.x(), currentVertex2.y())
 			if distance <= maxDistanceHitTest:
@@ -601,7 +615,8 @@ class SplitMapTool(QgsMapToolEdit):
 		deletedLast = False
 		newCapturedPoints = []
 		for i in range(len(self.capturedPoints)):
-			currentVertex = self.toCanvasCoordinates(self.toMapCoordinates(self.layer, self.capturedPoints[i]))
+			vertex = self.toMapCoordinates(self.layer, self.capturedPoints[i])
+			currentVertex = self.toCanvasCoordinates(QgsPointXY(vertex.x(), vertex.y()))
 			if not self.distancePoint(pos, currentVertex) <= maxDistanceHitTest:
 				newCapturedPoints.append(self.capturedPoints[i])
 			elif i == 0:
@@ -738,7 +753,8 @@ class SplitMapTool(QgsMapToolEdit):
 
 	def showVertices(self):
 		for i in range(len(self.capturedPoints)):
-			vertexCoords = self.toCanvasCoordinates(self.toMapCoordinates(self.layer, self.capturedPoints[i]))
+			vertexc = self.toMapCoordinates(self.layer, self.capturedPoints[i])
+			vertexCoords = self.toCanvasCoordinates(QgsPointXY(vertexc.x(), vertexc.y()))
 			if i == self.movingVertex:
 				vertex = self.scene.addRect(vertexCoords.x() - 5, vertexCoords.y() - 5, 10, 10, QPen(QColor("green")), QBrush(QColor("green")))
 				self.vertices.append(vertex)

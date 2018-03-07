@@ -3,10 +3,10 @@
 name=Split Features On Steroids
 email=antonio@antoniocarlon.com
 author=Antonio Carlón
-qgisMinimumVersion=2.0
+qgisMinimumVersion=3.0
 description=Split features showing areas on each side allowing the edition of the cutting line vertices
 about=Split one or more polygon/multipolygon features showing the resulting areas on each side of the cutting line. Adjust the vertices of the cutting line before splitting.
-version=0.11
+version=0.12
 repository=https://github.com/antoniocarlon/SplitPolygonShowingAreas
 tracker=https://github.com/antoniocarlon/SplitPolygonShowingAreas/issues
 homepage=https://github.com/antoniocarlon/SplitPolygonShowingAreas
