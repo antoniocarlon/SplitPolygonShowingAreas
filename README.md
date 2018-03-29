@@ -2,7 +2,7 @@
 QGIS plugin that splits one or more polygon/multipolygon features showing the resulting areas on each side of the cutting line and allowing cutting line editions
 
 ### Current version
-v0.12
+v0.13
 
 ### Manual
 
