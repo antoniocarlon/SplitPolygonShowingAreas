@@ -146,7 +146,7 @@ class SplitFeaturesOnSteroidsPlugin(object):
 			self.mapTool = None
 			return
 		layer = self.iface.activeLayer()
-		if layer == None or not isinstance(layer, QgsVectorLayer) or (layer.wkbType() != QgsWkbTypes.Polygon and layer.wkbType() != QgsWkbTypes.MultiPolygon and layer.wkbType() != QgsWkbTypes.Polygon25D and layer.wkbType() != QgsWkbTypes.MultiPoint25D):
+		if layer == None or not isinstance(layer, QgsVectorLayer) or (layer.wkbType() != QgsWkbTypes.Polygon and layer.wkbType() != QgsWkbTypes.MultiPolygon and layer.wkbType() != QgsWkbTypes.Polygon25D and layer.wkbType() != QgsWkbTypes.MultiPolygon25D):
 			self.iface.messageBar().pushMessage("No Polygon Vectorial Layer Selected", "Select a Polygon Vectorial Layer first", level=QgsMessageBar.WARNING)
 			self.action.setChecked(False)
 			return
@@ -255,7 +255,7 @@ class SplitFeaturesOnSteroidsPlugin(object):
 		
 		if layer != None and isinstance(layer, QgsVectorLayer):
 			selectedFeatures = layer.selectedFeatures()
-			if isinstance(layer, QgsVectorLayer) and (layer.wkbType() == QgsWkbTypes.Polygon or layer.wkbType() == QgsWkbTypes.MultiPolygon or layer.wkbType() == QgsWkbTypes.Polygon25D or layer.wkbType() == QgsWkbTypes.MultiPoint25D) and selectedFeatures != None and len(selectedFeatures) > 0 and layer.isEditable():
+			if isinstance(layer, QgsVectorLayer) and (layer.wkbType() == QgsWkbTypes.Polygon or layer.wkbType() == QgsWkbTypes.MultiPolygon or layer.wkbType() == QgsWkbTypes.Polygon25D or layer.wkbType() == QgsWkbTypes.MultiPolygon25D) and selectedFeatures != None and len(selectedFeatures) > 0 and layer.isEditable():
 				self.action.setEnabled(True)
 
 class SplitMapTool(QgsMapToolEdit):
