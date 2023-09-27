@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 # 2017 - Antonio Carlon
-
+from PyQt5.QtCore import pyqtSignal
 from builtins import str
 from builtins import range
 from builtins import object
@@ -8,7 +8,11 @@ from qgis.PyQt.QtCore import QObject, Qt
 from qgis.PyQt.QtGui import QIcon, QColor, QPen, QBrush
 from qgis.PyQt.QtWidgets import QAction, QMessageBox, QGraphicsTextItem
 from math import sqrt, sin, cos, pi, pow
-
+from qgis.gui import *
+from qgis.core import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import Qt
+import sys, os
 from . import resources
 import threading
 import qgis.utils
@@ -24,7 +28,7 @@ moveSegmentName = "Move segment"
 closeLineName = "Close line"
 openLineName = "Open line"
 moveLineName = "Move line"
-areaUnits = {0 : "m<sup>2</sup>", 1 : "km<sup>2</sup>", 2 : "ft<sup>2</sup>", 3 : "sq yd", 4 : "sq mi", 5 : "ha", 6 : "ac", 7 : "M<sup>2</sup>", 8 : "deg<sup>2</sup>", 9 : ""}
+areaUnits = {0 :"ac" , 1 : "km<sup>2</sup>", 2 : "ft<sup>2</sup>", 3 : "sq yd", 4 : "sq mi", 5 : "ha", 6 : "m<sup>2</sup>", 7 : "M<sup>2</sup>", 8 : "deg<sup>2</sup>", 9 : ""}
 maxDistanceHitTest = 5
 
 class SplitFeaturesOnSteroidsPlugin(object):
@@ -131,6 +135,7 @@ class SplitFeaturesOnSteroidsPlugin(object):
 		qgis.utils.showPluginHelp(filename="index")
 
 	def onClick(self):
+		print("onclick")
 		self.disableAll()
 		if not self.action.isChecked():
 			if self.mapTool != None and len(self.mapTool.capturedPoints) >= 2:
@@ -152,7 +157,7 @@ class SplitFeaturesOnSteroidsPlugin(object):
 			return
 		selectedFeatures = layer.selectedFeatures()
 		if selectedFeatures == None or len(selectedFeatures) == 0:
-			self.iface.messageBar().pushMessage("No Features Selected", "Select some features first", level=QgsMessageBar.WARNING)
+			self.iface.messageBar().pushWarning( "No Features Selected", "Select some features first")
 			self.action.setChecked(False)
 			return
 		
@@ -259,9 +264,14 @@ class SplitFeaturesOnSteroidsPlugin(object):
 				self.action.setEnabled(True)
 
 class SplitMapTool(QgsMapToolEdit):
+	snapClicked = pyqtSignal(QgsPointXY, Qt.MouseButton)
 	def __init__(self, canvas, layer, actionMoveVertices, actionAddVertices, actionRemoveVertices, actionMoveSegment, actionLineClose, actionLineOpen, actionMoveLine):
 		super(SplitMapTool, self).__init__(canvas)
+		
+        
 		self.canvas = canvas
+		self.snapIndicator = QgsSnapIndicator(canvas)
+		self.snapper = self.canvas.snappingUtils()
 		self.scene = canvas.scene()
 		self.layer = layer
 		self.actionMoveVertices = actionMoveVertices
@@ -296,7 +306,7 @@ class SplitMapTool(QgsMapToolEdit):
 		self.vertices = []
 		self.calculator = QgsDistanceArea()
 		self.calculator.setSourceCrs(self.layer.dataProvider().crs(), QgsProject.instance().transformContext())
-		self.calculator.setEllipsoid(self.layer.dataProvider().crs().ellipsoidAcronym())
+		self.calculator.setEllipsoid(None) #self.layer.dataProvider().crs().ellipsoidAcronym()
 		self.drawingLine = False
 		self.movingVertices = False
 		self.addingVertices = False
@@ -331,16 +341,27 @@ class SplitMapTool(QgsMapToolEdit):
 			self.redrawVertices()
 
 	def canvasMoveEvent(self, event):
+		snapMatch = self.snapper.snapToMap(event.pos())
+		self.snapIndicator.setMatch(snapMatch)
+
 		if self.drawingLine and not self.lineClosed:
-			if self.tempRubberBand != None and self.capturing:
-				mapPoint = self.toMapCoordinates(event.pos())
+			if self.tempRubberBand is not None and self.capturing:
+				if snapMatch.type():
+					mapPoint = snapMatch.point()
+				else:
+					mapPoint = self.toMapCoordinates(event.pos())
+				
 				self.tempRubberBand.movePoint(mapPoint)
 				self.redrawAreas(event.pos())
 
 		if self.movingVertices and self.movingVertex >= 0:
-			layerPoint = self.toLayerCoordinates(self.layer, event.pos())
-			self.capturedPoints[self.movingVertex] = layerPoint
+			if snapMatch.type():
+				layerPoint = snapMatch.point()
+			else:
+				layerPoint = self.toLayerCoordinates(self.layer, event.pos())
 			
+			self.capturedPoints[self.movingVertex] = layerPoint
+
 			if self.lineClosed and self.movingVertex == 0:
 				self.capturedPoints[len(self.capturedPoints) - 1] = layerPoint
 
@@ -349,6 +370,7 @@ class SplitMapTool(QgsMapToolEdit):
 			self.redrawAreas()
 
 		if self.movingSegment and self.movingSegm >= 0:
+			print('movingSegment')
 			currentPoint = self.toLayerCoordinates(self.layer, event.pos())
 			distance = self.distancePoint(currentPoint, self.movingLineInitialPoint)
 			bearing = self.movingLineInitialPoint.azimuth(currentPoint)
@@ -402,13 +424,14 @@ class SplitMapTool(QgsMapToolEdit):
 						self.addLabel(newGeometries[i])
 
 	def addLabel(self, geometry):
-		area = self.calculator.measureArea(geometry)
+		
+		area = self.calculator.measureArea(geometry)* 0.000247105381
 		labelPoint = geometry.pointOnSurface().vertexAt(0)
 		label = QGraphicsTextItem("%.2f" % round(area,2))
 		label.setHtml("<div style=\"color:#ffffff;background:#111111;padding:5px\">"
-			+ "%.2f" % round(area,2) + " "
-			+ areaUnits[self.calculator.areaUnits()]
-			+ "</div>")
+			+ "%.2f" % round(area,2) + " ac"
+			
+			 "</div>")
 		point = self.toMapCoordinatesV2(self.layer, labelPoint)
 		label.setPos(self.toCanvasCoordinates(QgsPointXY(point.x(), point.y())))
 
@@ -421,15 +444,24 @@ class SplitMapTool(QgsMapToolEdit):
 		self.labels = []
 
 	def canvasPressEvent(self, event):
+		snapMatch = self.snapIndicator.match()
+		print('canvaspsadsressevent')
 		if self.movingVertices:
+			print('movingvertices')
+			snapMatch = self.snapIndicator.match()
 			for i in range(len(self.capturedPoints)):
-				point = self.toMapCoordinates(self.layer, self.capturedPoints[i])
+				
+				if snapMatch.type():
+					point = snapMatch.point()
+				else:
+					point = self.toMapCoordinates(self.layer, self.capturedPoints[i])
 				currentVertex = self.toCanvasCoordinates(QgsPointXY(point.x(), point.y()))
 				if self.distancePoint(event.pos(), currentVertex) <= maxDistanceHitTest:
-					self.movingVertex = i
-					break
+						self.movingVertex = i
+						break
 
 		if self.movingSegment:
+			
 			for i in range(len(self.capturedPoints) - 1):
 				vertex1 = self.toMapCoordinates(self.layer, self.capturedPoints[i])
 				currentVertex1 = self.toCanvasCoordinates(QgsPointXY(vertex1.x(), vertex1.y()))
@@ -445,6 +477,7 @@ class SplitMapTool(QgsMapToolEdit):
 		return sqrt((eventPos.x() - vertexPos.x())**2 + (eventPos.y() - vertexPos.y())**2)
 
 	def canvasReleaseEvent(self, event):
+		print("canvas relase event")
 		if self.movingVertices or self.movingSegment or self.movingLine:
 			if event.button() == Qt.RightButton:
 				self.finishOperation()
@@ -558,8 +591,14 @@ class SplitMapTool(QgsMapToolEdit):
 		self.redrawActions()
 
 	def addEndingVertex(self, canvasPoint):
-		mapPoint = self.toMapCoordinates(canvasPoint)
-		layerPoint = self.toLayerCoordinates(self.layer, canvasPoint)
+		snapMatch = self.snapper.snapToMap(canvasPoint)  # Try to snap to the map
+
+		if snapMatch.type():
+			mapPoint = snapMatch.point()  # Use the snapped point if available
+		else:
+			mapPoint = self.toMapCoordinates(canvasPoint)  # Use the cursor position if no snap
+
+		layerPoint = self.toLayerCoordinates(self.layer, mapPoint)
 
 		self.rubberBand.addPoint(mapPoint)
 		self.capturedPoints.append(layerPoint)
@@ -589,6 +628,7 @@ class SplitMapTool(QgsMapToolEdit):
 		del self.capturedPoints[-1]
 
 	def addVertex(self, pos):
+		print('addvertex')
 		newCapturedPoints = []
 		for i in range(len(self.capturedPoints) - 1):
 			newCapturedPoints.append(self.capturedPoints[i])
